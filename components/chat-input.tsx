@@ -1,5 +1,6 @@
 'use client'
 
+import Logo from './logo'
 import { RepoBanner } from './repo-banner'
 import { Button } from '@/components/ui/button'
 import {
@@ -270,17 +271,17 @@ export function ChatInput({
         </div>
       </div>
       <p className="text-xs text-muted-foreground mt-2 text-center">
-        Fragments is an{' '}
+        Fragments is an open-source project made by{' '}
         <a
-          href="https://github.com/e2b-dev/fragments"
+          href="https://e2b.dev"
           target="_blank"
-          className="underline decoration-dotted"
+          aria-label="E2B"
+          className="text-[#ff8800]"
         >
-          open-source project
-        </a>{' '}
-        made by{' '}
-        <a href="https://e2b.dev" target="_blank" className="text-[#ff8800]">
-          ✶ E2B
+          <Logo
+            style="e2b-small"
+            className="inline-block h-[9px] w-auto align-baseline"
+          />
         </a>
       </p>
     </form>

@@ -85,13 +85,6 @@
       "multiModal": true
     },
     {
-      "id": "o1",
-      "provider": "OpenAI",
-      "providerId": "openai",
-      "name": "o1",
-      "multiModal": true
-    },
-    {
       "id": "o1-mini",
       "provider": "OpenAI",
       "providerId": "openai",
@@ -106,45 +99,24 @@
       "multiModal": true
     },
     {
-      "id": "claude-opus-4-1-20250805",
+      "id": "claude-opus-4-5-20251101",
       "provider": "Anthropic",
       "providerId": "anthropic",
-      "name": "Claude Opus 4.1",
+      "name": "Claude Opus 4.5",
       "multiModal": true
     },
     {
-      "id": "claude-opus-4-20250514",
+      "id": "claude-haiku-4-5-20251001",
       "provider": "Anthropic",
       "providerId": "anthropic",
-      "name": "Claude Opus 4",
+      "name": "Claude Haiku 4.5",
       "multiModal": true
     },
     {
-      "id": "claude-sonnet-4-20250514",
+      "id": "claude-sonnet-4-5-20250929",
       "provider": "Anthropic",
       "providerId": "anthropic",
-      "name": "Claude Sonnet 4",
-      "multiModal": true
-    },
-    {
-      "id": "claude-3-7-sonnet-latest",
-      "provider": "Anthropic",
-      "providerId": "anthropic",
-      "name": "Claude Sonnet 3.7",
-      "multiModal": true
-    },
-    {
-      "id": "claude-3-5-sonnet-latest",
-      "provider": "Anthropic",
-      "providerId": "anthropic",
-      "name": "Claude Sonnet 3.5",
-      "multiModal": true
-    },
-    {
-      "id": "claude-3-5-haiku-latest",
-      "provider": "Anthropic",
-      "providerId": "anthropic",
-      "name": "Claude Haiku 3.5",
+      "name": "Claude Sonnet 4.5",
       "multiModal": true
     },
     {
@@ -173,13 +145,6 @@
       "provider": "Google Vertex AI",
       "providerId": "vertex",
       "name": "Gemini 2.0 Flash Lite",
-      "multiModal": true
-    },
-    {
-      "id": "gemini-1.5-pro-002",
-      "provider": "Google Vertex AI",
-      "providerId": "vertex",
-      "name": "Gemini 1.5 Pro",
       "multiModal": true
     },
     {
@@ -215,13 +180,6 @@
       "provider": "Google Generative AI",
       "providerId": "google",
       "name": "Gemini 2.0 Flash Lite",
-      "multiModal": true
-    },
-    {
-      "id": "models/gemini-1.5-pro",
-      "provider": "Google Generative AI",
-      "providerId": "google",
-      "name": "Gemini 1.5 Pro",
       "multiModal": true
     },
     {
@@ -439,6 +397,13 @@
       "provider": "xAI",
       "providerId": "xai",
       "name": "Grok 3 Mini Fast",
+      "multiModal": false
+    },
+    {
+      "id": "grok-code-fast-1",
+      "provider": "xAI",
+      "providerId": "xai",
+      "name": "Grok Code Fast 1",
       "multiModal": false
     },
     {

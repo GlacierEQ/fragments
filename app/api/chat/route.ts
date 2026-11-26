@@ -1,14 +1,16 @@
+import { handleAPIError, createRateLimitResponse } from '@/lib/api-errors'
 import { Duration } from '@/lib/duration'
 import {
+  getClientApiKey,
   getModelClient,
-  LLMModel,
-  LLMModelConfig,
+  getModelParams,
+  resolveModel,
 } from '@/lib/models'
 import { toPrompt } from '@/lib/prompt'
 import ratelimit from '@/lib/ratelimit'
+import { chatRequestSchema, parseRequest } from '@/lib/request-schema'
 import { fragmentSchema as schema } from '@/lib/schema'
-import { Templates } from '@/lib/templates'
-import { streamObject, LanguageModel, CoreMessage } from 'ai'
+import { streamObject, LanguageModel } from 'ai'
 
 export const maxDuration = 300
 
@@ -20,23 +22,20 @@ const ratelimitWindow = process.env.RATE_LIMIT_WINDOW
   : '1d'
 
 export async function POST(req: Request) {
-  const {
-    messages,
-    userID,
-    teamID,
-    template,
-    model,
-    config,
-  }: {
-    messages: CoreMessage[]
-    userID: string | undefined
-    teamID: string | undefined
-    template: Templates
-    model: LLMModel
-    config: LLMModelConfig
-  } = await req.json()
+  const request = await parseRequest(req, chatRequestSchema)
+  if ('error' in request) {
+    return request.error
+  }
+  const { messages, userID, teamID, template, model, config } = request.data
 
-  const limit = !config.apiKey
+  const llm = resolveModel(model.id)
+  if (!llm || llm.providerId !== model.providerId) {
+    return new Response('Unsupported model', { status: 400 })
+  }
+
+  // Requests sent with the server's keys are rate limited.
+  const hasOwnApiKey = !!getClientApiKey(llm, config)
+  const limit = !hasOwnApiKey
     ? await ratelimit(
         req.headers.get('x-forwarded-for'),
         rateLimitMaxRequests,
@@ -45,14 +44,7 @@ export async function POST(req: Request) {
     : false
 
   if (limit) {
-    return new Response('You have reached your request limit for the day.', {
-      status: 429,
-      headers: {
-        'X-RateLimit-Limit': limit.amount.toString(),
-        'X-RateLimit-Remaining': limit.remaining.toString(),
-        'X-RateLimit-Reset': limit.reset.toString(),
-      },
-    })
+    return createRateLimitResponse(limit)
   }
 
   console.log('userID', userID)
@@ -61,8 +53,7 @@ export async function POST(req: Request) {
   console.log('model', model)
   // console.log('config', config)
 
-  const { model: modelNameString, apiKey: modelApiKey, ...modelParams } = config
-  const modelClient = getModelClient(model, config)
+  const modelClient = getModelClient(llm, config)
 
   try {
     const stream = await streamObject({
@@ -71,52 +62,11 @@ export async function POST(req: Request) {
       system: toPrompt(template),
       messages,
       maxRetries: 0, // do not retry on errors
-      ...modelParams,
+      ...getModelParams(config),
     })
 
     return stream.toTextStreamResponse()
   } catch (error: any) {
-    const isRateLimitError =
-      error && (error.statusCode === 429 || error.message.includes('limit'))
-    const isOverloadedError =
-      error && (error.statusCode === 529 || error.statusCode === 503)
-    const isAccessDeniedError =
-      error && (error.statusCode === 403 || error.statusCode === 401)
-
-    if (isRateLimitError) {
-      return new Response(
-        'The provider is currently unavailable due to request limit. Try using your own API key.',
-        {
-          status: 429,
-        },
-      )
-    }
-
-    if (isOverloadedError) {
-      return new Response(
-        'The provider is currently unavailable. Please try again later.',
-        {
-          status: 529,
-        },
-      )
-    }
-
-    if (isAccessDeniedError) {
-      return new Response(
-        'Access denied. Please make sure your API key is valid.',
-        {
-          status: 403,
-        },
-      )
-    }
-
-    console.error('Error:', error)
-
-    return new Response(
-      'An unexpected error has occurred. Please try again later.',
-      {
-        status: 500,
-      },
-    )
+    return handleAPIError(error, { hasOwnApiKey })
   }
 }

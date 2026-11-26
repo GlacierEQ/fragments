@@ -12,9 +12,10 @@ import { useAuth } from '@/lib/auth'
 import { Message, toAISDKMessages, toMessageImage } from '@/lib/messages'
 import { LLMModelConfig } from '@/lib/models'
 import modelsList from '@/lib/models.json'
+import { toRequestConfig } from '@/lib/request-schema'
 import { FragmentSchema, fragmentSchema as schema } from '@/lib/schema'
 import { supabase } from '@/lib/supabase'
-import templates, { TemplateId } from '@/lib/templates'
+import templates from '@/lib/templates'
 import { ExecutionResult } from '@/lib/types'
 import { DeepPartial } from 'ai'
 import { experimental_useObject as useObject } from 'ai/react'
@@ -25,13 +26,13 @@ import { useLocalStorage } from 'usehooks-ts'
 export default function Home() {
   const [chatInput, setChatInput] = useLocalStorage('chat', '')
   const [files, setFiles] = useState<File[]>([])
-  const [selectedTemplate, setSelectedTemplate] = useState<'auto' | TemplateId>(
+  const [selectedTemplate, setSelectedTemplate] = useState<string>(
     'auto',
   )
   const [languageModel, setLanguageModel] = useLocalStorage<LLMModelConfig>(
     'languageModel',
     {
-      model: 'claude-3-5-sonnet-latest',
+      model: 'claude-sonnet-4-5-20250929',
     },
   )
 
@@ -47,6 +48,10 @@ export default function Home() {
   const [isRateLimited, setIsRateLimited] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const { session, userTeam } = useAuth(setAuthDialog, setAuthView)
+  const [useMorphApply, setUseMorphApply] = useLocalStorage(
+    'useMorphApply',
+    process.env.NEXT_PUBLIC_USE_MORPH_APPLY === 'true',
+  )
 
   const filteredModels = modelsList.models.filter((model) => {
     if (process.env.NEXT_PUBLIC_HIDE_LOCAL_MODELS) {
@@ -55,17 +60,33 @@ export default function Home() {
     return true
   })
 
+  const defaultModel = filteredModels.find(
+    (model) => model.id === 'claude-sonnet-4-5-20250929',
+  ) || filteredModels[0]
+
   const currentModel = filteredModels.find(
     (model) => model.id === languageModel.model,
-  )
+  ) || defaultModel
+
+  // Update localStorage if stored model no longer exists
+  useEffect(() => {
+    if (languageModel.model && !filteredModels.find((m) => m.id === languageModel.model)) {
+      setLanguageModel({ ...languageModel, model: defaultModel.id })
+    }
+  }, [languageModel.model])
   const currentTemplate =
     selectedTemplate === 'auto'
       ? templates
       : { [selectedTemplate]: templates[selectedTemplate] }
   const lastMessage = messages[messages.length - 1]
 
+  // Determine which API to use based on morph toggle and existing fragment
+  const shouldUseMorph =
+    useMorphApply && fragment && fragment.code && fragment.file_path
+  const apiEndpoint = shouldUseMorph ? '/api/morph-chat' : '/api/chat'
+
   const { object, submit, isLoading, stop, error } = useObject({
-    api: '/api/chat',
+    api: apiEndpoint,
     schema,
     onError: (error) => {
       console.error('Error submitting request:', error)
@@ -179,7 +200,8 @@ export default function Home() {
       messages: toAISDKMessages(updatedMessages),
       template: currentTemplate,
       model: currentModel,
-      config: languageModel,
+      config: toRequestConfig(languageModel),
+      ...(shouldUseMorph && fragment ? { currentFragment: fragment } : {}),
     })
 
     setChatInput('')
@@ -199,7 +221,8 @@ export default function Home() {
       messages: toAISDKMessages(messages),
       template: currentTemplate,
       model: currentModel,
-      config: languageModel,
+      config: toRequestConfig(languageModel),
+      ...(shouldUseMorph && fragment ? { currentFragment: fragment } : {}),
     })
   }
 
@@ -317,7 +340,8 @@ export default function Home() {
               languageModel={languageModel}
               onLanguageModelChange={handleLanguageModelChange}
               apiKeyConfigurable={!process.env.NEXT_PUBLIC_NO_API_KEY_INPUT}
-              baseURLConfigurable={!process.env.NEXT_PUBLIC_NO_BASE_URL_INPUT}
+              useMorphApply={useMorphApply}
+              onUseMorphApplyChange={setUseMorphApply}
             />
           </ChatInput>
         </div>
